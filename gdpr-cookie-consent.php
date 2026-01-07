@@ -1,10 +1,11 @@
 <?php
 /**
  * Plugin Name: GDPR Cookie Consent
- * Plugin URI: https://github.com/PtOlga/gdpr-cookie-consent
- * Description: Lightweight GDPR cookie consent banner. Minimal, non-intrusive, customizable.
+ * Plugin URI: https://ptolga.github.io
+ * Description: Lightweight GDPR cookie consent banner with Google Consent Mode v2. Minimal, non-intrusive, customizable.
  * Version: 1.0.0
  * Author: PtOlga
+ * Author URI: https://ptolga.github.io
  * License: GPL v2 or later
  * Text Domain: gdpr-cookie-consent
  */
@@ -196,6 +197,10 @@ class GDPR_Cookie_Consent {
             'gdpr-cookie-consent'
         );
         
+        add_settings_field('use_theme_colors', __('Use Theme Colors', 'gdpr-cookie-consent'), 
+            [$this, 'render_checkbox_field'], 'gdpr-cookie-consent', 'gdpr_cc_appearance', 
+            ['field' => 'use_theme_colors', 'default' => false, 'description' => __('Automatically use colors from your WordPress theme', 'gdpr-cookie-consent')]);
+        
         add_settings_field('banner_bg_color', __('Banner Background', 'gdpr-cookie-consent'), 
             [$this, 'render_color_field'], 'gdpr-cookie-consent', 'gdpr_cc_appearance', ['field' => 'banner_bg_color', 'default' => '#1f2937']);
         
@@ -294,9 +299,42 @@ class GDPR_Cookie_Consent {
         );
     }
     
+    public function render_checkbox_field($args) {
+        $value = $this->get_option($args['field'], $args['default']);
+        printf(
+            '<label><input type="checkbox" name="gdpr_cc_options[%s]" value="1" %s /> %s</label>',
+            esc_attr($args['field']),
+            checked($value, true, false),
+            esc_html($args['description'] ?? '')
+        );
+        
+        // Show detected theme colors
+        if ($args['field'] === 'use_theme_colors') {
+            $theme_colors = $this->get_theme_colors();
+            $detected = array_filter($theme_colors);
+            
+            if ($detected) {
+                echo '<div style="margin-top: 10px; padding: 10px; background: #f0f0f1; border-radius: 4px;">';
+                echo '<strong>' . __('Detected theme colors:', 'gdpr-cookie-consent') . '</strong><br>';
+                foreach ($detected as $name => $color) {
+                    printf(
+                        '<span style="display: inline-block; margin: 5px 10px 0 0;"><span style="display: inline-block; width: 16px; height: 16px; background: %s; border: 1px solid #ccc; vertical-align: middle; border-radius: 3px;"></span> %s: %s</span>',
+                        esc_attr($color),
+                        esc_html(ucfirst($name)),
+                        esc_html($color)
+                    );
+                }
+                echo '</div>';
+            } else {
+                echo '<p style="color: #666; margin-top: 5px;"><em>' . __('No theme colors detected. Using manual colors.', 'gdpr-cookie-consent') . '</em></p>';
+            }
+        }
+    }
+    
     public function sanitize_options($input) {
         $sanitized = [];
         
+        $sanitized['use_theme_colors'] = !empty($input['use_theme_colors']);
         $sanitized['banner_bg_color'] = sanitize_hex_color($input['banner_bg_color'] ?? '#1f2937');
         $sanitized['banner_text_color'] = sanitize_hex_color($input['banner_text_color'] ?? '#ffffff');
         $sanitized['button_bg_color'] = sanitize_hex_color($input['button_bg_color'] ?? '#22c55e');
@@ -312,12 +350,20 @@ class GDPR_Cookie_Consent {
     }
     
     public function render_settings_page() {
+        $options = $this->get_all_options();
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
             
             <div style="background: #fff; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e;">
-                <strong>Preview:</strong> The banner will appear at the bottom of your site for visitors who haven't made a choice yet.
+                <strong><?php _e('Live Preview:', 'gdpr-cookie-consent'); ?></strong>
+                <div id="gdpr-preview" style="margin-top: 15px; padding: 12px 20px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; font-size: 14px; background: <?php echo esc_attr($options['banner_bg_color']); ?>; color: <?php echo esc_attr($options['banner_text_color']); ?>;">
+                    <span><?php echo esc_html($options['banner_message']); ?> <a href="#" style="color: inherit; text-decoration: underline;"><?php echo esc_html($options['privacy_link_text']); ?></a></span>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" style="padding: 6px 16px; border-radius: 4px; font-size: 13px; cursor: default; background: transparent; border: 1px solid <?php echo esc_attr($options['banner_text_color']); ?>; color: <?php echo esc_attr($options['banner_text_color']); ?>;"><?php echo esc_html($options['button_reject_text']); ?></button>
+                        <button type="button" style="padding: 6px 16px; border-radius: 4px; font-size: 13px; cursor: default; border: none; background: <?php echo esc_attr($options['button_bg_color']); ?>; color: <?php echo esc_attr($options['button_text_color']); ?>;"><?php echo esc_html($options['button_accept_text']); ?></button>
+                    </div>
+                </div>
             </div>
             
             <form method="post" action="options.php">
@@ -329,9 +375,9 @@ class GDPR_Cookie_Consent {
             </form>
             
             <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px;">
-                <h3>🔍 Test with GDPR Scanner</h3>
-                <p>Check if your cookie consent is properly configured:</p>
-                <a href="https://gdpr-scanner.example.com" target="_blank" class="button">Scan My Website</a>
+                <h3>🔍 <?php _e('Test with GDPR Scanner', 'gdpr-cookie-consent'); ?></h3>
+                <p><?php _e('Check if your cookie consent is properly configured:', 'gdpr-cookie-consent'); ?></p>
+                <a href="https://web-production-0704b.up.railway.app" target="_blank" class="button"><?php _e('Scan My Website', 'gdpr-cookie-consent'); ?></a>
             </div>
         </div>
         <?php
@@ -340,6 +386,93 @@ class GDPR_Cookie_Consent {
     private function get_option($key, $default = '') {
         $options = get_option('gdpr_cc_options', []);
         return $options[$key] ?? $default;
+    }
+    
+    /**
+     * Get colors from WordPress theme (Customizer, theme.json, or Global Styles)
+     */
+    private function get_theme_colors() {
+        $colors = [
+            'primary' => null,
+            'secondary' => null,
+            'background' => null,
+            'text' => null,
+        ];
+        
+        // Method 1: Block themes (FSE) - WordPress 5.9+
+        if (function_exists('wp_get_global_styles')) {
+            $global_styles = wp_get_global_styles();
+            
+            if (!empty($global_styles['color']['background'])) {
+                $colors['background'] = $global_styles['color']['background'];
+            }
+            if (!empty($global_styles['color']['text'])) {
+                $colors['text'] = $global_styles['color']['text'];
+            }
+        }
+        
+        // Method 2: Theme.json palette (WordPress 5.8+)
+        if (function_exists('wp_get_global_settings')) {
+            $settings = wp_get_global_settings();
+            $palette = $settings['color']['palette']['theme'] ?? [];
+            
+            foreach ($palette as $color) {
+                $slug = $color['slug'] ?? '';
+                $hex = $color['color'] ?? '';
+                
+                if (in_array($slug, ['primary', 'accent', 'brand'])) {
+                    $colors['primary'] = $colors['primary'] ?? $hex;
+                }
+                if (in_array($slug, ['secondary', 'contrast'])) {
+                    $colors['secondary'] = $colors['secondary'] ?? $hex;
+                }
+                if (in_array($slug, ['base', 'background', 'white'])) {
+                    $colors['background'] = $colors['background'] ?? $hex;
+                }
+                if (in_array($slug, ['contrast', 'text', 'black'])) {
+                    $colors['text'] = $colors['text'] ?? $hex;
+                }
+            }
+        }
+        
+        // Method 3: Customizer colors (classic themes)
+        $custom_bg = get_background_color();
+        if ($custom_bg && !$colors['background']) {
+            $colors['background'] = '#' . ltrim($custom_bg, '#');
+        }
+        
+        $header_text = get_theme_mod('header_textcolor');
+        if ($header_text && $header_text !== 'blank' && !$colors['text']) {
+            $colors['text'] = '#' . ltrim($header_text, '#');
+        }
+        
+        // Method 4: Common theme mods
+        $primary_color = get_theme_mod('primary_color') ?: get_theme_mod('accent_color') ?: get_theme_mod('link_color');
+        if ($primary_color && !$colors['primary']) {
+            $colors['primary'] = $primary_color;
+        }
+        
+        return $colors;
+    }
+    
+    /**
+     * Determine if a color is light or dark
+     */
+    private function is_light_color($hex) {
+        $hex = ltrim($hex, '#');
+        
+        if (strlen($hex) === 3) {
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
+        }
+        
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+        
+        // Calculate luminance
+        $luminance = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
+        
+        return $luminance > 0.5;
     }
     
     private function get_all_options() {
@@ -354,9 +487,29 @@ class GDPR_Cookie_Consent {
             'privacy_policy_url' => '',
             'privacy_link_text' => 'Learn more',
             'cookie_expiry' => 365,
+            'use_theme_colors' => false,
         ];
         
-        return wp_parse_args(get_option('gdpr_cc_options', []), $defaults);
+        $options = wp_parse_args(get_option('gdpr_cc_options', []), $defaults);
+        
+        // Override with theme colors if enabled
+        if (!empty($options['use_theme_colors'])) {
+            $theme_colors = $this->get_theme_colors();
+            
+            // Use theme primary as button color
+            if ($theme_colors['primary']) {
+                $options['button_bg_color'] = $theme_colors['primary'];
+                $options['button_text_color'] = $this->is_light_color($theme_colors['primary']) ? '#1f2937' : '#ffffff';
+            }
+            
+            // Use dark background with light text (or inverse based on theme)
+            if ($theme_colors['text']) {
+                $options['banner_bg_color'] = $theme_colors['text'];
+                $options['banner_text_color'] = $this->is_light_color($theme_colors['text']) ? '#1f2937' : '#ffffff';
+            }
+        }
+        
+        return $options;
     }
 }
 
