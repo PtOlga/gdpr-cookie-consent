@@ -117,21 +117,56 @@ class GDPR_Cookie_Consent {
         $message = esc_html($options['banner_message']);
         $btn_accept = esc_html($options['button_accept_text']);
         $btn_reject = esc_html($options['button_reject_text']);
+        $btn_save = esc_html($options['button_save_text'] ?? 'Save preferences');
         $privacy_url = esc_url($options['privacy_policy_url']);
         $privacy_text = esc_html($options['privacy_link_text']);
+        
+        // Category labels
+        $cat_necessary = esc_html($options['category_necessary_label'] ?? 'Necessary');
+        $cat_analytics = esc_html($options['category_analytics_label'] ?? 'Analytics');
+        $cat_marketing = esc_html($options['category_marketing_label'] ?? 'Marketing');
+        $cat_necessary_desc = esc_html($options['category_necessary_desc'] ?? 'Essential for the website to function');
+        $cat_analytics_desc = esc_html($options['category_analytics_desc'] ?? 'Help us understand how visitors use our site');
+        $cat_marketing_desc = esc_html($options['category_marketing_desc'] ?? 'Used for targeted advertising');
         
         ?>
         <div id="gdpr-cookie-banner" class="gdpr-banner" style="background-color: <?php echo $banner_bg; ?>; color: <?php echo $banner_text; ?>;">
             <div class="gdpr-banner-content">
-                <span class="gdpr-banner-message">
-                    <?php echo $message; ?>
-                    <?php if ($privacy_url): ?>
-                        <a href="<?php echo $privacy_url; ?>" target="_blank" style="color: <?php echo $banner_text; ?>;"><?php echo $privacy_text; ?></a>
-                    <?php endif; ?>
-                </span>
+                <div class="gdpr-banner-main">
+                    <span class="gdpr-banner-message">
+                        <?php echo $message; ?>
+                        <?php if ($privacy_url): ?>
+                            <a href="<?php echo $privacy_url; ?>" target="_blank" style="color: <?php echo $banner_text; ?>;"><?php echo $privacy_text; ?></a>
+                        <?php endif; ?>
+                    </span>
+                    
+                    <div class="gdpr-categories">
+                        <label class="gdpr-category gdpr-category-necessary">
+                            <input type="checkbox" checked disabled data-category="necessary">
+                            <span class="gdpr-category-name"><?php echo $cat_necessary; ?></span>
+                            <span class="gdpr-category-desc"><?php echo $cat_necessary_desc; ?></span>
+                        </label>
+                        
+                        <label class="gdpr-category">
+                            <input type="checkbox" data-category="analytics">
+                            <span class="gdpr-category-name"><?php echo $cat_analytics; ?></span>
+                            <span class="gdpr-category-desc"><?php echo $cat_analytics_desc; ?></span>
+                        </label>
+                        
+                        <label class="gdpr-category">
+                            <input type="checkbox" data-category="marketing">
+                            <span class="gdpr-category-name"><?php echo $cat_marketing; ?></span>
+                            <span class="gdpr-category-desc"><?php echo $cat_marketing_desc; ?></span>
+                        </label>
+                    </div>
+                </div>
+                
                 <div class="gdpr-banner-buttons">
                     <button type="button" class="gdpr-btn gdpr-btn-reject" data-action="reject" style="color: <?php echo $banner_text; ?>; border-color: <?php echo $banner_text; ?>;">
                         <?php echo $btn_reject; ?>
+                    </button>
+                    <button type="button" class="gdpr-btn gdpr-btn-save" data-action="save" style="color: <?php echo $banner_text; ?>; border-color: <?php echo $banner_text; ?>;">
+                        <?php echo $btn_save; ?>
                     </button>
                     <button type="button" class="gdpr-btn gdpr-btn-accept" data-action="accept" style="background-color: <?php echo $btn_bg; ?>; color: <?php echo $btn_text; ?>;">
                         <?php echo $btn_accept; ?>
@@ -227,11 +262,15 @@ class GDPR_Cookie_Consent {
         
         add_settings_field('button_accept_text', __('Accept Button', 'gdpr-cookie-consent'), 
             [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_text', 
-            ['field' => 'button_accept_text', 'default' => 'Accept']);
+            ['field' => 'button_accept_text', 'default' => 'Accept all']);
         
         add_settings_field('button_reject_text', __('Reject Button', 'gdpr-cookie-consent'), 
             [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_text', 
-            ['field' => 'button_reject_text', 'default' => 'Reject']);
+            ['field' => 'button_reject_text', 'default' => 'Reject all']);
+        
+        add_settings_field('button_save_text', __('Save Button', 'gdpr-cookie-consent'), 
+            [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_text', 
+            ['field' => 'button_save_text', 'default' => 'Save preferences']);
         
         add_settings_field('privacy_policy_url', __('Privacy Policy URL', 'gdpr-cookie-consent'), 
             [$this, 'render_url_field'], 'gdpr-cookie-consent', 'gdpr_cc_text', 
@@ -240,6 +279,40 @@ class GDPR_Cookie_Consent {
         add_settings_field('privacy_link_text', __('Privacy Link Text', 'gdpr-cookie-consent'), 
             [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_text', 
             ['field' => 'privacy_link_text', 'default' => 'Learn more']);
+        
+        // Categories Section
+        add_settings_section(
+            'gdpr_cc_categories',
+            __('Cookie Categories', 'gdpr-cookie-consent'),
+            function() {
+                echo '<p>' . __('Customize the labels and descriptions for each cookie category.', 'gdpr-cookie-consent') . '</p>';
+            },
+            'gdpr-cookie-consent'
+        );
+        
+        add_settings_field('category_necessary_label', __('Necessary - Label', 'gdpr-cookie-consent'), 
+            [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_categories', 
+            ['field' => 'category_necessary_label', 'default' => 'Necessary']);
+        
+        add_settings_field('category_necessary_desc', __('Necessary - Description', 'gdpr-cookie-consent'), 
+            [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_categories', 
+            ['field' => 'category_necessary_desc', 'default' => 'Essential for the website to function']);
+        
+        add_settings_field('category_analytics_label', __('Analytics - Label', 'gdpr-cookie-consent'), 
+            [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_categories', 
+            ['field' => 'category_analytics_label', 'default' => 'Analytics']);
+        
+        add_settings_field('category_analytics_desc', __('Analytics - Description', 'gdpr-cookie-consent'), 
+            [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_categories', 
+            ['field' => 'category_analytics_desc', 'default' => 'Help us understand how visitors use our site']);
+        
+        add_settings_field('category_marketing_label', __('Marketing - Label', 'gdpr-cookie-consent'), 
+            [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_categories', 
+            ['field' => 'category_marketing_label', 'default' => 'Marketing']);
+        
+        add_settings_field('category_marketing_desc', __('Marketing - Description', 'gdpr-cookie-consent'), 
+            [$this, 'render_text_field'], 'gdpr-cookie-consent', 'gdpr_cc_categories', 
+            ['field' => 'category_marketing_desc', 'default' => 'Used for targeted advertising']);
         
         // Settings Section
         add_settings_section(
@@ -340,11 +413,20 @@ class GDPR_Cookie_Consent {
         $sanitized['button_bg_color'] = sanitize_hex_color($input['button_bg_color'] ?? '#22c55e');
         $sanitized['button_text_color'] = sanitize_hex_color($input['button_text_color'] ?? '#ffffff');
         $sanitized['banner_message'] = sanitize_textarea_field($input['banner_message'] ?? '');
-        $sanitized['button_accept_text'] = sanitize_text_field($input['button_accept_text'] ?? 'Accept');
-        $sanitized['button_reject_text'] = sanitize_text_field($input['button_reject_text'] ?? 'Reject');
+        $sanitized['button_accept_text'] = sanitize_text_field($input['button_accept_text'] ?? 'Accept all');
+        $sanitized['button_reject_text'] = sanitize_text_field($input['button_reject_text'] ?? 'Reject all');
+        $sanitized['button_save_text'] = sanitize_text_field($input['button_save_text'] ?? 'Save preferences');
         $sanitized['privacy_policy_url'] = esc_url_raw($input['privacy_policy_url'] ?? '');
         $sanitized['privacy_link_text'] = sanitize_text_field($input['privacy_link_text'] ?? 'Learn more');
         $sanitized['cookie_expiry'] = absint($input['cookie_expiry'] ?? 365);
+        
+        // Category labels
+        $sanitized['category_necessary_label'] = sanitize_text_field($input['category_necessary_label'] ?? 'Necessary');
+        $sanitized['category_necessary_desc'] = sanitize_text_field($input['category_necessary_desc'] ?? 'Essential for the website to function');
+        $sanitized['category_analytics_label'] = sanitize_text_field($input['category_analytics_label'] ?? 'Analytics');
+        $sanitized['category_analytics_desc'] = sanitize_text_field($input['category_analytics_desc'] ?? 'Help us understand how visitors use our site');
+        $sanitized['category_marketing_label'] = sanitize_text_field($input['category_marketing_label'] ?? 'Marketing');
+        $sanitized['category_marketing_desc'] = sanitize_text_field($input['category_marketing_desc'] ?? 'Used for targeted advertising');
         
         return $sanitized;
     }
@@ -357,11 +439,38 @@ class GDPR_Cookie_Consent {
             
             <div style="background: #fff; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e;">
                 <strong><?php _e('Live Preview:', 'gdpr-cookie-consent'); ?></strong>
-                <div id="gdpr-preview" style="margin-top: 15px; padding: 12px 20px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; font-size: 14px; background: <?php echo esc_attr($options['banner_bg_color']); ?>; color: <?php echo esc_attr($options['banner_text_color']); ?>;">
-                    <span><?php echo esc_html($options['banner_message']); ?> <a href="#" style="color: inherit; text-decoration: underline;"><?php echo esc_html($options['privacy_link_text']); ?></a></span>
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" style="padding: 6px 16px; border-radius: 4px; font-size: 13px; cursor: default; background: transparent; border: 1px solid <?php echo esc_attr($options['banner_text_color']); ?>; color: <?php echo esc_attr($options['banner_text_color']); ?>;"><?php echo esc_html($options['button_reject_text']); ?></button>
-                        <button type="button" style="padding: 6px 16px; border-radius: 4px; font-size: 13px; cursor: default; border: none; background: <?php echo esc_attr($options['button_bg_color']); ?>; color: <?php echo esc_attr($options['button_text_color']); ?>;"><?php echo esc_html($options['button_accept_text']); ?></button>
+                <div id="gdpr-preview" style="margin-top: 15px; padding: 15px 20px; border-radius: 4px; font-size: 14px; background: <?php echo esc_attr($options['banner_bg_color']); ?>; color: <?php echo esc_attr($options['banner_text_color']); ?>;">
+                    <div style="margin-bottom: 12px;">
+                        <?php echo esc_html($options['banner_message']); ?> 
+                        <a href="#" style="color: inherit; text-decoration: underline;"><?php echo esc_html($options['privacy_link_text']); ?></a>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                        <label style="display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; background: rgba(255,255,255,0.1); border-radius: 6px; opacity: 0.7;">
+                            <input type="checkbox" checked disabled style="margin-top: 2px;">
+                            <span>
+                                <strong style="display: block;"><?php echo esc_html($options['category_necessary_label']); ?></strong>
+                                <small style="opacity: 0.8;"><?php echo esc_html($options['category_necessary_desc']); ?></small>
+                            </span>
+                        </label>
+                        <label style="display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; background: rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer;">
+                            <input type="checkbox" style="margin-top: 2px;">
+                            <span>
+                                <strong style="display: block;"><?php echo esc_html($options['category_analytics_label']); ?></strong>
+                                <small style="opacity: 0.8;"><?php echo esc_html($options['category_analytics_desc']); ?></small>
+                            </span>
+                        </label>
+                        <label style="display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; background: rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer;">
+                            <input type="checkbox" style="margin-top: 2px;">
+                            <span>
+                                <strong style="display: block;"><?php echo esc_html($options['category_marketing_label']); ?></strong>
+                                <small style="opacity: 0.8;"><?php echo esc_html($options['category_marketing_desc']); ?></small>
+                            </span>
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" style="padding: 8px 16px; border-radius: 4px; font-size: 13px; cursor: default; background: transparent; border: 1px solid <?php echo esc_attr($options['banner_text_color']); ?>; color: <?php echo esc_attr($options['banner_text_color']); ?>;"><?php echo esc_html($options['button_reject_text']); ?></button>
+                        <button type="button" style="padding: 8px 16px; border-radius: 4px; font-size: 13px; cursor: default; background: transparent; border: 1px solid <?php echo esc_attr($options['banner_text_color']); ?>; color: <?php echo esc_attr($options['banner_text_color']); ?>;"><?php echo esc_html($options['button_save_text']); ?></button>
+                        <button type="button" style="padding: 8px 16px; border-radius: 4px; font-size: 13px; cursor: default; border: none; background: <?php echo esc_attr($options['button_bg_color']); ?>; color: <?php echo esc_attr($options['button_text_color']); ?>;"><?php echo esc_html($options['button_accept_text']); ?></button>
                     </div>
                 </div>
             </div>
@@ -482,12 +591,19 @@ class GDPR_Cookie_Consent {
             'button_bg_color' => '#22c55e',
             'button_text_color' => '#ffffff',
             'banner_message' => 'We use cookies to improve your experience.',
-            'button_accept_text' => 'Accept',
-            'button_reject_text' => 'Reject',
+            'button_accept_text' => 'Accept all',
+            'button_reject_text' => 'Reject all',
+            'button_save_text' => 'Save preferences',
             'privacy_policy_url' => '',
             'privacy_link_text' => 'Learn more',
             'cookie_expiry' => 365,
             'use_theme_colors' => false,
+            'category_necessary_label' => 'Necessary',
+            'category_necessary_desc' => 'Essential for the website to function',
+            'category_analytics_label' => 'Analytics',
+            'category_analytics_desc' => 'Help us understand how visitors use our site',
+            'category_marketing_label' => 'Marketing',
+            'category_marketing_desc' => 'Used for targeted advertising',
         ];
         
         $options = wp_parse_args(get_option('gdpr_cc_options', []), $defaults);
